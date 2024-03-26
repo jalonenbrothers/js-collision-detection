@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collision Detection</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="wrapper">
+        <canvas id="stage"></canvas>
+        <div class="overlay">
+            <ul>
+                <li>Mouse wheel to zoom in/out</li>
+                <li>Press & hold mouse middle button to move stage</li>
+                <li>Example Shapes:<ul>
+                    <li>Large square:<br>[[-140,-70],[440,-70],[440,220],[-140,220]]</li>
+                    <li>Triangle:<br>[[200,0],[0,200],[200,200]]</li>
+                    <li>Smaller triangle inside previous:<br>[[185,40],[30,190],[185,190]]</li>
+                </ul></li>
+            </ul>
+        </div>
+    </div>
+    <div id="controls">
+        <div><label for="points">Define points: </label><input id="points" type="text" value="[[0,0],[1,0],[0,1],[1,1]]" /></div>
+        <div><button id="generatedefined">generate user defined shape</button>
+        <button id="generaterandom">generate random shape</button>
+        <button id="clear">Clear all</button></div>
+        <div>Collision count: <span id="collisioncount">0</span></div>
+    </div>
+    <script type="module" src="math/utils.js"></script>
+    <script type="module" src="primitives/point.js"></script>
+    <script type="module" src="primitives/segment.js"></script>
+    <script type="module" src="primitives/polygon.js"></script></body>
+    <script type="module" src="viewport.js"></script>    
+    <script type="module">
+        import Point from './primitives/point.js';
+        import Segment from './primitives/segment.js';
+        import Viewport from './viewport.js';
+        import Polygon from './primitives/polygon.js';
+        import { scale, getRandomIntInclusive } from './math/utils.js';
+
+        // Random shape boundaries
+        const OBJECT_MIN_POINTS = 3;
+        const OBJECT_MAX_POINTS = 10;
+        const MAX_X = 200; // x-size range 0 - MAX_X
+        const MAX_Y = 200;
+        const MIN_OFFSET_X = -200; 
+        const MIN_OFFSET_Y = -200;
+        const MAX_OFFSET_X = 500;      
+        const MAX_OFFSET_Y = 500;       
+
+        // Canvas to hold shapes
+        const stage = document.getElementById("stage");
+        const ctx = stage.getContext("2d");
+        
+        // Controls to add shapes
+        const generateDefinedButton = document.getElementById("generatedefined");
+        const generateRandomButton = document.getElementById("generaterandom");
+        const clearStageButton = document.getElementById("clear");
+        const collisionCounter = document.getElementById("collisioncount");
+
+        // List of user defined coordinates from the form
+        let userDefinedCoordinates =  JSON.parse(document.getElementById("points").value);
+
+        // Array to hold objects
+        let objects = [];
+
+        // Array to hold collisions
+        let intersectingSegments = [];
+        let objectContainingOrContained = [];
+
+        // Button listeners
+        generateDefinedButton.addEventListener("click", generateDefinedObject);
+        generateRandomButton.addEventListener("click", generateRandomObject);
+        clearStageButton.addEventListener("click", clearStage);
+
+        const viewport = new Viewport(stage);
+
+        animate();
+
+        function animate() {
+            viewport.reset();
+            const viewPoint = scale(viewport.getOffset(), -1);
+            if(objects.length) {
+                for(let object of objects){
+                    object.draw(ctx);
+                }
+            }
+
+            // Display 'collisions':
+            // Overlapping objects' first found 'offending lines' red
+            // Containing / Contained objects fill red
+            if( objects.length && (intersectingSegments.length || objectContainingOrContained.length)) {
+                displayCollisions();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function clearStage(){
+            objects = [];
+            intersectingSegments = [];
+            objectContainingOrContained = [];
+            updateCollisions(0);
+        }
+
+        function generateDefinedObject() {
+            userDefinedCoordinates =  JSON.parse(document.getElementById("points").value);
+            addObjectToStage(new Polygon(coordinatesToPoints(userDefinedCoordinates)));
+        }
+
+        function generateRandomObject() {
+            const numberOfPoints = getRandomIntInclusive(OBJECT_MIN_POINTS, OBJECT_MAX_POINTS);
+            const offsetX = getRandomIntInclusive(MIN_OFFSET_X, MAX_OFFSET_X);
+            const offsetY = getRandomIntInclusive(MIN_OFFSET_Y, MAX_OFFSET_Y);
+            const points = generateRandomPoints(numberOfPoints, offsetX, offsetY);
+            addObjectToStage(new Polygon(points))
+        }
+
+        function addObjectToStage(object) {          
+            let intersectingSegmentPair = false;
+            for(const existingObject of objects) {
+                intersectingSegmentPair = object.getFirstIntersectingSegments(existingObject);
+                if(intersectingSegmentPair !== false) {
+                    intersectingSegments.push(...intersectingSegmentPair);
+                }
+                else {
+                    if(
+                        existingObject.containsPoint(object.points[0]) || 
+                        object.containsPoint(existingObject.points[0])
+                    ) {
+                        objectContainingOrContained.push(object);
+                    }
+                }
+            }
+            objects.push(object);
+        }
+
+        // Draws/fills extra to highlight overlapping/intersecting/containing elements
+        function displayCollisions() {
+            for(const seg of intersectingSegments) {
+                seg.draw(ctx, {color: "red", width: 5});
+            }
+            for(const obj of objectContainingOrContained) {
+                obj.draw(ctx, {fill: "rgba(255,0,0,0.5)"});
+            }
+            updateCollisions(intersectingSegments.length/2 + objectContainingOrContained.length);
+        }
+
+        // Collision count display only
+        function updateCollisions(count) {
+            collisionCounter.textContent = count; 
+        }
+
+        function generateRandomPoints(numberOfPoints, offsetX, offsetY) {
+            const points = [];
+            for(let i = 0; i < numberOfPoints; i++) {
+                points.push(new Point(getRandomIntInclusive(offsetX, MAX_X + offsetX), getRandomIntInclusive(offsetY, MAX_Y + offsetY)))
+            }
+            return points;
+        }
+
+        // array of coordinates to Point objects
+        function coordinatesToPoints(coordsArray) {
+            const pointsArray = []
+            for (let coords of coordsArray) {
+                pointsArray.push(new Point(coords[0], coords[1]));
+            }
+            return pointsArray;
+        }
+
+    </script>    
+</html>
