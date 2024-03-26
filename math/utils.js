@@ -1,18 +1,5 @@
 import Point from '../primitives/point.js';
 
-export function getNearestPoint(loc, points, threshold = Number.MAX_SAFE_INTEGER) {
-    let minDist = Number.MAX_SAFE_INTEGER;
-    let nearest = null;
-    for (const point of points) {
-        const dist = distance(point, loc);
-        if(dist < minDist && dist < threshold) {
-            minDist = dist;
-            nearest = point;
-        }
-    }
-    return nearest;
-}
-
 export function distance(p1, p2) {
     return Math.hypot(p1.x - p2.x, p1.y - p2.y);
 }
@@ -45,13 +32,6 @@ export function normalize(p){
 //distance to the origin
 export function magnitude(p){
     return Math.hypot(p.x, p.y);
-}
-
-export function translate(loc, angle, offset) {
-    return new Point(
-        loc.x + Math.cos(angle) * offset,
-        loc.y + Math.sin(angle) * offset
-    );
 }
 
 export function angle(p) {
@@ -110,10 +90,6 @@ export function lerp(a, b, t) {
     //where 0 <= t <= 1 (ie. between A and B)
     //return a + (b - a) * t; //imprecise
     return (1 - t) * a + t * b; //precise
-}
-
-export function lerp2D(A, B, t) {
-    return new Point(lerp(A.x, B.x, t), lerp(A.y, B.y, t));
 }
 
 export function getRandomColor() {

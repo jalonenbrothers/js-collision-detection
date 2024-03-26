@@ -1,44 +1,48 @@
 import Point from './point.js';
 import Segment from './segment.js';
-import { getIntersection, average } from '../math/utils.js';
+import { getIntersection, average, angle, getRandomColor } from '../math/utils.js';
 
 export default class Polygon {
-    constructor(points) {
+    constructor(points, sort=false) {
         this.points = points;
         this.segments = [];
-        const center = this.findCenter(this.points);
-        this.findAngles(center, this.points);
 
-        // sort based on angle using custom sort
-        this.points.sort(function(a, b) {
-            return (a.angle >= b.angle) ? 1 : -1
-        });
-        
-        for (let i = 1; i <= points.length; i++) {
+        if(sort){
+            // Sorting points before creating segments
+            // Gives random shapes a bit better structure
+            this.findAngles(this.findCenter());
+    
+            // sort based on angle 
+            this.points.sort(function(a, b) {
+                return (a.angle <= b.angle) ? -1 : 1
+            });
+        }
+
+        for (let i = 1; i <= this.points.length; i++) {
             this.segments.push(
                 // modulo allows return 0 instead of error when i == points.length; returns back, closes loop
-                new Segment(points[i - 1], points[i % points.length]) 
+                new Segment(this.points[i - 1], this.points[i % this.points.length]) 
             );
         }
     }
 
-    findAngles(c, points) {
-        var i, len = points.length, p, dx, dy;
+    findAngles(c) {
+        let len = this.points.length, p, dx, dy;
       
-        for (i = 0; i < len; i++) {
-          p = points[i];
-          dx = p.x - c.x;
-          dy = p.y - c.y;
-          p.angle = Math.atan2(dy, dx);
+        for (let i = 0; i < len; i++) {
+            p = this.points[i];
+            dx = p.x - c.x;
+            dy = p.y - c.y;
+            p.angle = angle(p);
         }
-      }
+    }
 
-    findCenter(points) {
-        var x = 0, y = 0, i, len = points.length;
+    findCenter() {
+        let x = 0, y = 0, len = this.points.length;
       
-        for (i = 0; i < len; i++) {
-            x += points[i].x;
-            y += points[i].y;
+        for (let i = 0; i < len; i++) {
+            x += this.points[i].x;
+            y += this.points[i].y;
         }
         return {x: x / len, y: y / len};   // return average position
     }
@@ -63,14 +67,16 @@ export default class Polygon {
         return false;
     }
 
-    getFirstIntersectingSegments(poly) {
+    getIntersectingSegments(poly) {
+        const intersections = [];
         for (let s1 of this.segments) {
             for (let s2 of poly.segments) {
                 if (getIntersection(s1.p1, s1.p2, s2.p1, s2.p2)) {
-                    return [s1, s2];
+                    intersections.push(...[s1, s2]);
                 }
             }
         }
+        if(intersections.length) { return intersections; }
         return false;
     }
 
@@ -99,7 +105,7 @@ export default class Polygon {
         }
     }
 
-    draw(ctx, { stroke = "blue", lineWidth = 2, fill = "rgba(0,0,255,0.3)" } = {} ) {
+    draw(ctx, { stroke = "blue", lineWidth = 1, fill = "rgba(0,0,255,0.3)" } = {} ) {
         ctx.beginPath();
         ctx.fillStyle = fill;
         ctx.strokeStyle = stroke;

@@ -17,12 +17,13 @@
                     <li>Large square:<br>[[-140,-70],[440,-70],[440,220],[-140,220]]</li>
                     <li>Triangle:<br>[[200,0],[0,200],[200,200]]</li>
                     <li>Smaller triangle inside previous:<br>[[185,40],[30,190],[185,190]]</li>
+                    <li>Pentagon:<br>[[30,30],[20,60],[50,80],[70,60],[60,30]]</li>
                 </ul></li>
             </ul>
         </div>
     </div>
     <div id="controls">
-        <div><label for="points">Define points: </label><input id="points" type="text" value="[[0,0],[1,0],[0,1],[1,1]]" /></div>
+        <div><label for="points">Define points: </label><input id="points" type="text" value="[[-100,0],[200,60],[300,200],[300,0]]" /></div>
         <div><button id="generatedefined">generate user defined shape</button>
         <button id="generaterandom">generate random shape</button>
         <button id="clear">Clear all</button></div>
@@ -75,6 +76,7 @@
         generateRandomButton.addEventListener("click", generateRandomObject);
         clearStageButton.addEventListener("click", clearStage);
 
+        // Viewport allows to move around as well as zoom in/out
         const viewport = new Viewport(stage);
 
         animate();
@@ -83,7 +85,7 @@
             viewport.reset();
             const viewPoint = scale(viewport.getOffset(), -1);
             if(objects.length) {
-                for(let object of objects){
+                for(const object of objects){
                     object.draw(ctx);
                 }
             }
@@ -115,15 +117,15 @@
             const offsetX = getRandomIntInclusive(MIN_OFFSET_X, MAX_OFFSET_X);
             const offsetY = getRandomIntInclusive(MIN_OFFSET_Y, MAX_OFFSET_Y);
             const points = generateRandomPoints(numberOfPoints, offsetX, offsetY);
-            addObjectToStage(new Polygon(points))
+            addObjectToStage(new Polygon(points, true))
         }
 
         function addObjectToStage(object) {          
-            let intersectingSegmentPair = false;
+            let intersectingSegmentPairs = false;
             for(const existingObject of objects) {
-                intersectingSegmentPair = object.getFirstIntersectingSegments(existingObject);
-                if(intersectingSegmentPair !== false) {
-                    intersectingSegments.push(...intersectingSegmentPair);
+                intersectingSegmentPairs = object.getIntersectingSegments(existingObject);
+                if(intersectingSegmentPairs !== false) {
+                    intersectingSegments.push(...intersectingSegmentPairs);
                 }
                 else {
                     if(
